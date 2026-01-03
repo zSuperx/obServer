@@ -5,6 +5,34 @@ use anyhow::bail;
 const CONTINUE_BIT_MASK: i64 = 0x80;
 const SEGMENT_BITS_MASK: i64 = 0x7F;
 
+pub fn read_var_int_optional<T: Read>(
+    stream: &mut T,
+    max_bytes: u8,
+) -> anyhow::Result<Option<i32>> {
+    let mut result: i32 = 0;
+    let mut position: i32 = 0;
+    let mut current_byte = [0u8; 1];
+    loop {
+        let bytes_read = stream.read(&mut current_byte)?;
+        if bytes_read == 0 {
+            if position == 0 { return Ok(None); } // Clean EOF
+            else { bail!("Connection closed mid-VarInt"); }
+        }
+
+        result |= (current_byte[0] as i32 & SEGMENT_BITS_MASK as i32) << position;
+
+        if current_byte[0] as i32 & CONTINUE_BIT_MASK as i32 == 0 {
+            return Ok(Some(result));
+        }
+
+        position += 7;
+
+        if position >= max_bytes as i32 * 7 {
+            bail!("VarInt too big!");
+        }
+    }
+}
+
 pub fn read_var_int<T: Read>(stream: &mut T, max_bytes: u8) -> anyhow::Result<i32> {
     let mut result: i32 = 0;
     let mut position: i32 = 0;
