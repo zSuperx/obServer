@@ -31,7 +31,9 @@ fn main() -> anyhow::Result<()> {
         loop {
             match state {
                 ServerState::Running => {
-                    task::sleep(std::time::Duration::from_secs(30)).await;
+                    println!("Going to sleep for 600 seconds...");
+                    task::sleep(std::time::Duration::from_secs(600)).await;
+                    println!("Just woke up");
 
                     match mc_server.get_player_count().await {
                         Ok(0) => {
@@ -81,9 +83,10 @@ fn main() -> anyhow::Result<()> {
                 }
                 ServerState::Starting => {
                     task::sleep(std::time::Duration::from_secs(10)).await;
+                    println!("Pinging the guy...");
                     // If connect succeeds, we know the server is ready
                     if mc_server
-                        .connect("127.0.0.1:25575", "password")
+                        .connect("127.0.0.1:25575", "bobby")
                         .await
                         .is_ok()
                     {
