@@ -364,9 +364,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-std",
- "protobuf",
  "rcon",
  "socket2",
+ "var-io",
 ]
 
 [[package]]
@@ -450,10 +450,6 @@ checksum = "8fd00f0bb2e90d81d1044c2b32617f68fcb9fa3bb7640c23e9c748e53fb30934"
 dependencies = [
  "unicode-ident",
 ]
-
-[[package]]
-name = "protobuf"
-version = "0.1.0"
 
 [[package]]
 name = "quote"
@@ -571,6 +567,10 @@ name = "value-bag"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ba6f5989077681266825251a52748b8c1d8a4ad098cc37e440103d0ea717fc0"
+
+[[package]]
+name = "var-io"
+version = "0.1.0"
 
 [[package]]
 name = "version_check"

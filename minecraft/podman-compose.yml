@@ -1,0 +1,18 @@
+services:
+  minecraft-server:
+    image: itzg/minecraft-server
+    container_name: mc-test-rcon
+    ports:
+      - "25565:25565" # Game port
+      - "25575:25575" # RCON port
+    environment:
+      EULA: "TRUE"
+      VERSION: "1.21.11"       # Sets the specific version
+      TYPE: "VANILLA"          # Standard Minecraft
+      ENABLE_RCON: "true"      # Activates RCON
+      RCON_PASSWORD: "bobby"
+      RCON_PORT: 25575
+      MEMORY: "2G"             # Optional: Adjust RAM as needed
+    volumes:
+      - /home/zsuper/fun/obServer-project/obServer/minecraft/data:/data # Persists your world/config in the local folder
+    restart: unless-stopped

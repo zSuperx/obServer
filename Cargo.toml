@@ -6,6 +6,6 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.100"
 async-std = "1.13.2"
-protobuf = { version = "0.1.0", path = "../protobuf" }
+var-io = { version = "0.1.0", path = "../var-io/" }
 rcon = { version = "0.6.0", features = ["rt-async-std"] }
 socket2 = "0.6.1"

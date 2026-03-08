@@ -9,15 +9,14 @@
 
 use std::{
     io::{BufReader, BufWriter, Read, Write},
-    net::{SocketAddr, TcpListener, TcpStream},
+    net::{Shutdown, SocketAddr, TcpListener, TcpStream},
     sync::{Arc, Mutex, OnceLock, RwLock, mpsc},
 };
 
 use anyhow::{anyhow, bail};
 use socket2::Socket;
 
-use crate::rwbuf::{MyBufReader, MyBufWriter};
-use protobuf::{VarRead, VarWrite};
+use var_io::{VarRead, VarWrite};
 
 const WIDTH: usize = 35;
 const EXAMPLE_RESPONSE: &'static str = r#"{
@@ -46,34 +45,49 @@ enum Event {
 }
 
 /// Runs the Minecraft proxy server, spawning threads for each client that interacts with it
-pub fn run_server(port: u16) -> anyhow::Result<()> {
+pub fn run_server(port: u16) -> Result<(), ProxyError> {
     // create the blitty
     let blitty_str = EXAMPLE_RESPONSE.replace(
         "<img-data>",
-        std::fs::read_to_string("./assets/blitty.b64")?.as_str(),
+        std::fs::read_to_string("./assets/blitty.b64")
+            .map_err(|_| ProxyError::Other)?
+            .as_str(),
     );
+
     BLITTY_RESPONSE.set(blitty_str);
 
     // create a TCP listener
-    let socket = Socket::new(socket2::Domain::IPV4, socket2::Type::STREAM, None)?;
+    let socket = Socket::new(socket2::Domain::IPV4, socket2::Type::STREAM, None)
+        .map_err(|_| ProxyError::FailedToBind)?;
 
     let address: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();
     let address = address.into();
     socket.set_reuse_address(true);
-    socket.bind(&address)?;
-    socket.listen(128)?;
-    let listener: TcpListener = socket.into();
+    socket.set_linger(Some(std::time::Duration::from_secs(0)));
+    socket
+        .bind(&address)
+        .map_err(|_| ProxyError::FailedToBind)?;
+    socket.listen(128).map_err(|_| ProxyError::FailedToBind)?;
+
+    let listener: TcpListener = socket.try_clone().unwrap().into();
 
     let (tx, rx) = mpsc::channel::<Event>();
 
-    let listener_tx = tx.clone();
+    let mut exit = Arc::new(Mutex::new(false));
+
+    let thread_tx = tx.clone();
+    let thread_exit = exit.clone();
     // This thread will forever listen on the TcpListener and signal the main thread upon
     // connections
-    std::thread::spawn(move || {
+    let join_handle = std::thread::spawn(move || {
         for client in listener.incoming() {
+            if *(thread_exit.lock().unwrap()) {
+                println!("TCP Listener thread exiting!");
+                break;
+            }
             match client {
-                Ok(stream) => listener_tx.send(Event::ClientJoined(stream)).unwrap(),
-                Err(e) => println!("[ERROR] While attempting to connect to client: {e}"),
+                Ok(stream) => thread_tx.send(Event::ClientJoined(stream)).unwrap(),
+                Err(e) => println!("[ERROR] While attempting to connect to client: {e:?}"),
             }
         }
     });
@@ -81,7 +95,7 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
     // Now just loop on incoming events so we know whether to create a new proxy session thread or
     // if we need to exit the loop and return control back to the main application
     loop {
-        match rx.recv()? {
+        match rx.recv().unwrap() {
             Event::ClientJoined(tcp_stream) => {
                 let thread_tx = tx.clone();
                 std::thread::spawn(move || match ProxySession::new(&tcp_stream).run() {
@@ -89,9 +103,12 @@ pub fn run_server(port: u16) -> anyhow::Result<()> {
                     Err(e) => println!("[ERROR] While talking to client: {e}"),
                 });
             }
-            Event::Shutdown => return Ok(()),
+            Event::Shutdown => break,
         }
     }
+    *exit.lock().unwrap() = true;
+    socket.shutdown(Shutdown::Both);
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -255,6 +272,20 @@ impl<'a> ProxySession<'a> {
         self.process_login()
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProxyError {
+    FailedToBind,
+    Other,
+}
+
+impl std::fmt::Display for ProxyError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{self}"))
+    }
+}
+
+impl std::error::Error for ProxyError {}
 
 fn printkv(key: &str, value: impl std::fmt::Display) {
     println!("{:<20}{:>15}", format!("{key}:"), value);
