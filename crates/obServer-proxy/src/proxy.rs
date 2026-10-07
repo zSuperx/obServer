@@ -45,7 +45,7 @@ enum Event {
 }
 
 /// Runs the Minecraft proxy server, spawning threads for each client that interacts with it
-pub fn run_server(port: u16) -> Result<(), ProxyError> {
+pub(crate) fn run_server(port: u16) -> Result<(), ProxyError> {
     // create the blitty
     let blitty_str = EXAMPLE_RESPONSE.replace(
         "<img-data>",
@@ -68,6 +68,8 @@ pub fn run_server(port: u16) -> Result<(), ProxyError> {
         .bind(&address)
         .map_err(|_| ProxyError::FailedToBind)?;
     socket.listen(128).map_err(|_| ProxyError::FailedToBind)?;
+
+    println!("Started obServer proxy service");
 
     let listener: TcpListener = socket.try_clone().unwrap().into();
 

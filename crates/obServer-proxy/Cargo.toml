@@ -1,0 +1,12 @@
+[package]
+name = "obServer-proxy"
+version.workspace = true
+edition.workspace = true
+
+
+[dependencies]
+anyhow = "1.0.104"
+async-std = { version = "1.13.2" }
+rcon = { version = "0.6.0", features = ["rt-async-std"] }
+socket2 = "0.6.5"
+var-io.workspace = true

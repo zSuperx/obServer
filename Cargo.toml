@@ -1,11 +1,21 @@
 [package]
 name = "obServer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+var-io.workspace = true
+obServer-proxy.workspace = true
+
+[workspace]
+resolver = "3"
+members = ["crates/*"]
+default-members = [".", "crates/*"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 
-[dependencies]
-anyhow = "1.0.100"
-async-std = "1.13.2"
-var-io = { version = "0.1.0", path = "../var-io/" }
-rcon = { version = "0.6.0", features = ["rt-async-std"] }
-socket2 = "0.6.1"
+[workspace.dependencies]
+var-io = { path = "crates/var-io", version = "0.1.0" }
+obServer-proxy = { path = "crates/obServer-proxy", version = "0.1.0" }
