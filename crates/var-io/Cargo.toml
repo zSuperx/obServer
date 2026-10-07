@@ -1,0 +1,7 @@
+[package]
+name = "var-io"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# Woohoo, no dependencies!
